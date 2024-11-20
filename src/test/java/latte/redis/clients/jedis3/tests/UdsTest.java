@@ -1,0 +1,87 @@
+package latte.redis.clients.jedis3.tests;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.Socket;
+import latte.redis.clients.jedis3.HostAndPort;
+import latte.redis.clients.jedis3.Jedis;
+import latte.redis.clients.jedis3.JedisSocketFactory;
+import latte.redis.clients.jedis3.Protocol;
+import latte.redis.clients.jedis3.exceptions.JedisConnectionException;
+import org.junit.Test;
+import org.newsclub.net.unix.AFUNIXSocket;
+import org.newsclub.net.unix.AFUNIXSocketAddress;
+
+import static org.junit.Assert.assertEquals;
+
+public class UdsTest {
+
+  @Test
+  public void testConnectsToUds() {
+    try (Jedis jedis = new Jedis(new UdsJedisSocketFactory())) {
+      assertEquals("PONG", jedis.ping());
+    }
+  }
+
+  private static class UdsJedisSocketFactory implements JedisSocketFactory {
+
+    private static final File UDS_SOCKET = new File("/tmp/redis_uds.sock");
+
+    @Override
+    public Socket createSocket() throws JedisConnectionException {
+      try {
+        Socket socket = AFUNIXSocket.newStrictInstance();
+        socket.connect(new AFUNIXSocketAddress(UDS_SOCKET), Protocol.DEFAULT_TIMEOUT);
+        return socket;
+      } catch (IOException ioe) {
+        throw new JedisConnectionException("Failed to create UDS connection.", ioe);
+      }
+    }
+
+    @Override
+    public void updateHostAndPort(HostAndPort hostAndPort) {
+      throw new UnsupportedOperationException("UDS cannot update host and port");
+    }
+
+    @Override
+    public String getDescription() {
+      return UDS_SOCKET.toString();
+    }
+
+    @Override
+    public String getHost() {
+      return UDS_SOCKET.toString();
+    }
+
+    @Override
+    public void setHost(String host) {
+    }
+
+    @Override
+    public int getPort() {
+      return 0;
+    }
+
+    @Override
+    public void setPort(int port) {
+    }
+
+    @Override
+    public int getConnectionTimeout() {
+      return Protocol.DEFAULT_TIMEOUT;
+    }
+
+    @Override
+    public void setConnectionTimeout(int connectionTimeout) {
+    }
+
+    @Override
+    public int getSoTimeout() {
+      return Protocol.DEFAULT_TIMEOUT;
+    }
+
+    @Override
+    public void setSoTimeout(int soTimeout) {
+    }
+  }
+}
